@@ -22,8 +22,16 @@ func main() {
 		if xbe == nil {
 			continue
 		}
-		if debug {
-			fmt.Println(xbe.Name)
+		if xbe.Code == LJOYX || xbe.Code == LJOYY || xbe.Code == RJOYX || xbe.Code == RJOYY {
+			if debug {
+				fmt.Printf("%s  x: %d   y: %d\n", xbe.Name, xbe.X, xbe.Y)
+			}
+
+		} else {
+
+			if debug {
+				fmt.Println(xbe.Name)
+			}
 		}
 
 	}
