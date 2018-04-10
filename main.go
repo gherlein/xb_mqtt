@@ -14,7 +14,7 @@ var (
 	debug bool = true
 
 	network string = "tcp"
-	url     string = "rpisoar:1883"
+	url     string = "rpisoarw:1883"
 )
 
 func init() {
@@ -60,6 +60,25 @@ func main() {
 			}
 
 		} else {
+
+			if xbe.Code == A_DOWN {
+
+				msg := fmt.Sprintf("4=0.20")
+				err = cli.Publish(&client.PublishOptions{
+					QoS:       mqtt.QoS0,
+					TopicName: []byte("pi-blaster-mqtt/text"),
+					Message:   []byte(msg),
+				})
+			}
+			if xbe.Code == A_UP {
+
+				msg := fmt.Sprintf("4=0.15")
+				err = cli.Publish(&client.PublishOptions{
+					QoS:       mqtt.QoS0,
+					TopicName: []byte("pi-blaster-mqtt/text"),
+					Message:   []byte(msg),
+				})
+			}
 
 			msg := fmt.Sprintf("%s", xbe.Name)
 			err = cli.Publish(&client.PublishOptions{
