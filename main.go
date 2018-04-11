@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gherlein/xb"
 	. "github.com/gherlein/xbevents"
-
 	"github.com/yosssi/gmq/mqtt"
 	"github.com/yosssi/gmq/mqtt/client"
 )
