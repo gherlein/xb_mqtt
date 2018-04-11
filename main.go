@@ -2,18 +2,19 @@ package main
 
 import (
 	"fmt"
+	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/gherlein/xb"
 	. "github.com/gherlein/xbevents"
-	"github.com/yosssi/gmq/mqtt"
-	"github.com/yosssi/gmq/mqtt/client"
+	"math"
 )
 
 var (
-	xbe   *XBevent
-	debug bool = true
-
-	network string = "tcp"
-	url     string = "rpisoarw:1883"
+	xbe    *XBevent
+	debug  bool   = true
+	topic  string = "pi-blaster-mqtt/text"
+	broker string = "tcp://rpisoar:1883"
+	qos    int    = 0
+	m1pin  int    = 4
 )
 
 func init() {
@@ -22,19 +23,11 @@ func init() {
 
 func main() {
 
-	cli := client.New(&client.Options{
-		ErrorHandler: func(err error) {
-			fmt.Println(err)
-		},
-	})
-
-	err := cli.Connect(&client.ConnectOptions{
-		Network:  network,
-		Address:  url,
-		ClientID: []byte("example-client"),
-	})
-	if err != nil {
-		panic(err)
+	opts := MQTT.NewClientOptions()
+	opts.AddBroker(broker)
+	client := MQTT.NewClient(opts)
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
 	}
 
 	for {
@@ -48,46 +41,23 @@ func main() {
 				fmt.Printf("%s  x: %d   y: %d\n", xbe.Name, xbe.X, xbe.Y)
 			}
 
-			msg := fmt.Sprintf("%s|%d|%d", xbe.Name, xbe.X, xbe.Y)
-			err = cli.Publish(&client.PublishOptions{
-				QoS:       mqtt.QoS0,
-				TopicName: []byte("xb/1/joy"),
-				Message:   []byte(msg),
-			})
-			if err != nil {
-				panic(err)
-			}
+			p := float64(xbe.Y) / float64(math.MaxInt16)
+			v := float64(0.05) * p
+			v = 0.15 + v
+			msg := fmt.Sprintf("%d=%f", m1pin, v)
+			fmt.Printf("%s\n", msg)
 
+			token := client.Publish(topic, byte(qos), false, msg)
+			token.Wait()
 		} else {
 
 			if xbe.Code == A_DOWN {
 
-				msg := fmt.Sprintf("4=0.20")
-				err = cli.Publish(&client.PublishOptions{
-					QoS:       mqtt.QoS0,
-					TopicName: []byte("pi-blaster-mqtt/text"),
-					Message:   []byte(msg),
-				})
 			}
 			if xbe.Code == A_UP {
 
-				msg := fmt.Sprintf("4=0.15")
-				err = cli.Publish(&client.PublishOptions{
-					QoS:       mqtt.QoS0,
-					TopicName: []byte("pi-blaster-mqtt/text"),
-					Message:   []byte(msg),
-				})
 			}
 
-			msg := fmt.Sprintf("%s", xbe.Name)
-			err = cli.Publish(&client.PublishOptions{
-				QoS:       mqtt.QoS0,
-				TopicName: []byte("xb/1/raw"),
-				Message:   []byte(msg),
-			})
-			if err != nil {
-				panic(err)
-			}
 			if debug {
 				fmt.Println(xbe.Name)
 			}
