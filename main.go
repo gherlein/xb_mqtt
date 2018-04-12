@@ -10,19 +10,19 @@ import (
 
 var (
 	support_xy      bool   = true
-	support_vector  bool   = true
+	support_vector  bool   = false
 	support_buttons bool   = true
-	debugraw        bool   = true
-	debugvector     bool   = true
-	debugjoy        bool   = true
-	debugbutton     bool   = true
+	debugraw        bool   = false
+	debugvector     bool   = false
+	debugjoy        bool   = false
+	debugbutton     bool   = false
 	broker          string = "tcp://rpisoar:1883"
 	xy              string = "xb/1/joy-xy"
 	vector          string = "xb/1/joy-vector"
 	buttons         string = "xb/1/buttons"
 	qos             int    = 0
 	xmult           int16  = 1
-	ymult           int16  = 1
+	ymult           int16  = -1
 	client          MQTT.Client
 )
 
