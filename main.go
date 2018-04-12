@@ -9,17 +9,21 @@ import (
 )
 
 var (
-	xbe         *XBevent
-	debugraw    bool   = false
-	debugjoy    bool   = true
-	debugbutton bool   = true
-	broker      string = "tcp://rpisoar:1883"
-	raw         string = "xb/1/joy-xy"
-	angles      string = "xb/1/joy-vector"
-	buttons     string = "xb/1/buttons"
-	qos         int    = 0
-	xmult       int16  = 1
-	ymult       int16  = -1
+	support_xy      bool   = true
+	support_vector  bool   = true
+	support_buttons bool   = true
+	debugraw        bool   = true
+	debugvector     bool   = true
+	debugjoy        bool   = true
+	debugbutton     bool   = true
+	broker          string = "tcp://rpisoar:1883"
+	xy              string = "xb/1/joy-xy"
+	vector          string = "xb/1/joy-vector"
+	buttons         string = "xb/1/buttons"
+	qos             int    = 0
+	xmult           int16  = 1
+	ymult           int16  = 1
+	client          MQTT.Client
 )
 
 func init() {
@@ -28,70 +32,122 @@ func init() {
 
 func main() {
 
+	var xbe *XBevent
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(broker)
-	client := MQTT.NewClient(opts)
+	client = MQTT.NewClient(opts)
+
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
-
 	for {
-		xbe := xb.GetEvent()
+		xbe = xb.GetEvent()
 		if xbe == nil {
 			continue
 		}
-
-		if xbe.Code == LJOYX || xbe.Code == LJOYY || xbe.Code == RJOYX || xbe.Code == RJOYY {
-			if debugraw {
-				fmt.Printf("%s  x: %d   y: %d\n", xbe.Name, xbe.X, xbe.Y)
-			}
-			xbe.X *= xmult
-			xbe.Y *= ymult
-			var p float64 = 0.0
-			var msg string = "*|*|*"
-			if xbe.Code == LJOYX {
-				p = float64(xbe.X) / float64(math.MaxInt16)
-				msg = fmt.Sprintf("L|X|%f", p)
-			}
-			if xbe.Code == LJOYY {
-				p = float64(xbe.Y) / float64(math.MaxInt16)
-				msg = fmt.Sprintf("L|Y|%f", p)
-			}
-			if xbe.Code == RJOYX {
-				p = float64(xbe.X) / float64(math.MaxInt16)
-				msg = fmt.Sprintf("R|X|%f", p)
-			}
-			if xbe.Code == RJOYY {
-				p = float64(xbe.Y) / float64(math.MaxInt16)
-				msg = fmt.Sprintf("R|Y|%f", p)
-			}
-			/* this will set the PWM width - only here for testing
-			 v := float64(0.05) * p
-			v = 0.15 + v
-			msg := fmt.Sprintf("%d=%f", m1pin, v)
-			*/
-			if debugjoy {
-				fmt.Printf("%s\n", msg)
-			}
-			token := client.Publish(raw, byte(qos), false, msg)
-			token.Wait()
-		} else {
-			var msg string = "*|*|*"
-			msg = fmt.Sprintf("%s", xbe.Name)
-			if debugbutton {
-				fmt.Println(msg)
-			}
-			token := client.Publish(raw, byte(qos), false, msg)
-			token.Wait()
-			if xbe.Code == A_DOWN {
-
-			}
-			if xbe.Code == A_UP {
-
-			}
-
+		xbe.X *= xmult
+		xbe.Y *= ymult
+		if debugraw {
+			fmt.Printf("%s  X: %d   Y: %d\n", xbe.Name, xbe.X, xbe.Y)
 		}
 
-	}
+		if xbe.Code == LJOYX || xbe.Code == LJOYY || xbe.Code == RJOYX || xbe.Code == RJOYY {
+			send_joystick(xbe)
+			if support_vector {
+				send_vector(xbe)
+			}
 
+		} else {
+			if support_buttons {
+				send_button(xbe)
+			}
+		}
+	}
+}
+
+func send_button(xbe *XBevent) {
+	var msg string = "*"
+	msg = fmt.Sprintf("%s", xbe.Name)
+	if debugbutton {
+		fmt.Println(msg)
+	}
+	token := client.Publish(buttons, byte(qos), false, msg)
+	token.Wait()
+}
+
+func send_joystick(xbe *XBevent) {
+	var msg string = "*|*|*"
+	if xbe.Code == LJOYX {
+		msg = fmt.Sprintf("L|X|%d|%d", xbe.X, xbe.Y)
+	}
+	if xbe.Code == LJOYY {
+		msg = fmt.Sprintf("L|Y|%d|%d", xbe.X, xbe.Y)
+	}
+	if xbe.Code == RJOYX {
+		msg = fmt.Sprintf("R|X|%d|%d", xbe.X, xbe.Y)
+	}
+	if xbe.Code == RJOYY {
+		msg = fmt.Sprintf("R|Y|%d|%d", xbe.X, xbe.Y)
+	}
+	/* this will set the PWM width - only here for testing
+	 v := float64(0.05) * p
+	v = 0.15 + v
+	msg := fmt.Sprintf("%d=%f", m1pin, v)
+	*/
+	if support_xy {
+		if debugjoy {
+			fmt.Printf("%s\n", msg)
+		}
+		token := client.Publish(xy, byte(qos), false, msg)
+		token.Wait()
+	}
+}
+
+func send_vector(xbe *XBevent) {
+	var msg string = "*|*|*|*"
+	var r, theta float64
+
+	/*
+		if xbe.X > 0 {
+			lang = math.Atan2(ply, plx) * (180 / math.Pi)
+			rang = math.Atan2(pry, prx) * (180 / math.Pi)
+		}
+		if xbe.X < 0 && xbe.Y >= 0 {
+			lang = (math.Atan2(ply, plx) + math.Pi) * (180 / math.Pi)
+			rang = (math.Atan2(pry, prx) + math.Pi) * (180 / math.Pi)
+		}
+		if xbe.X < 0 && xbe.Y > 0 {
+			lang = (math.Atan2(ply, plx) - math.Pi) * (180 / math.Pi)
+			rang = (math.Atan2(pry, prx) - math.Pi) * (180 / math.Pi)
+		}
+		if xbe.X == 0 && xbe.Y > 0 {
+			lang = (math.Atan2(ply, plx) - math.Pi) * (180 / math.Pi)
+			rang = (math.Atan2(pry, prx) - math.Pi) * (180 / math.Pi)
+		}
+		if xbe.X == 0 && xbe.Y > 0 {
+			lang = (math.Pi / 2) * (180 / math.Pi)
+			rang = (math.Pi / 2) * (180 / math.Pi)
+		}
+		if xbe.X == 0 && xbe.Y < 0 {
+			lang = -1 * (math.Pi / 2) * (180 / math.Pi)
+			rang = -1 * (math.Pi / 2) * (180 / math.Pi)
+		}
+	*/
+	fx := float64(xbe.X)
+	fy := float64(xbe.Y)
+	rad := math.Atan2(float64(xbe.Y), float64(xbe.X))
+	theta = rad * (180 / math.Pi)
+
+	r = math.Sqrt((fx * fx) + (fy * fy))
+	if xbe.Code == LJOYX || xbe.Code == LJOYY {
+		msg = fmt.Sprintf("LJOY|A|%d|%d||%f|%f", xbe.X, xbe.Y, r, theta)
+	}
+	if xbe.Code == RJOYX || xbe.Code == RJOYY {
+		msg = fmt.Sprintf("RJOY|A|%d|%d||%f|%f", xbe.X, xbe.Y, r, theta)
+	}
+	if debugvector {
+		fmt.Println(msg)
+	}
+	token := client.Publish(vector, byte(qos), false, msg)
+	token.Wait()
 }

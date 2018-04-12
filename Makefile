@@ -30,3 +30,14 @@ restart:
 clean:
 	-rm -f ${FILE}
 	-rm -f *~
+
+#install_xboxdrv:
+#	sudo service xboxdrv stop
+#	sudo cp xboxdrv.service /lib/systemd/system/
+#	sudo cp xboxdrv /etc/defaults
+#	sudo cp uxvars.bak /usr/share/ubuntu-xboxdrv/uxvars
+#	sudo cp xboxdrv.ini /etc
+#	systemctl daemon-reload
+#	sudo service xboxdrv start
+#	sudo service xboxdrv status
+
