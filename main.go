@@ -16,7 +16,7 @@ var (
 	debugvector     bool   = false
 	debugjoy        bool   = false
 	debugbutton     bool   = false
-	broker          string = "tcp://rpisoar:1883"
+	broker          string = "tcp://localhost:1883"
 	xy              string = "xb/1/joy-xy"
 	vector          string = "xb/1/joy-vector"
 	buttons         string = "xb/1/buttons"
