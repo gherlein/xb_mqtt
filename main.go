@@ -12,7 +12,7 @@ var (
 	support_xy      bool   = true
 	support_vector  bool   = false
 	support_buttons bool   = true
-	debugraw        bool   = false
+	debugraw        bool   = true
 	debugvector     bool   = false
 	debugjoy        bool   = false
 	debugbutton     bool   = false
